@@ -10,13 +10,15 @@ COMMAND_NAME_SUFFIX = "_trunk"
 VERSION = "0.1"
 
 def install
+    puts "Install ......"
     puts "Input the private cocoaPods repo name: "
     repo_name = gets.chomp
     if repo_name.empty?
-        puts "The private cocoaPods repo name cant be empty."
+        puts "ERR:: The private cocoaPods repo name cant be empty."
     else
         exec_script_name = repo_name + COMMAND_NAME_SUFFIX
-        FileUtils.install $0, "/usr/local/bin/#{exec_script_name}", :mode => 0755, :verbose => true
+        FileUtils.install $0, "/usr/local/bin/#{exec_script_name}", :mode => 0755, :verbose => false
+        puts "Done!"
     end
 end
 
@@ -27,12 +29,14 @@ def repo_name_from_exec_name
 end
 
 def update_repo_ok? repo_name
+    puts "Updating private repo #{repo_name} ......"
     update_result = `pod repo update #{repo_name}`
     puts update_result
     if update_result.start_with? "[!] Unable to find the"
         puts "ERR:: The '#{repo_name}' is not existed. Use 'pod repo add <name> <repo url>' to add it."
         false
     else
+        puts "The private repo #{repo_name} has been updated!"
         true
     end
 end
@@ -61,12 +65,14 @@ def podspec_file_path
 end
 
 def commit_and_push(file_path, repo_spec_path, message)
+    puts "Start push the new version podspec ......"
     require 'fileutils'
     FileUtils.mkdir_p repo_spec_path
     FileUtils.cp file_path, repo_spec_path
     FileUtils.cd(repo_spec_path) do
         system "git add . && git commit -m'#{message}' && git push"
     end
+    puts "Done!"
 end
 
 def version
