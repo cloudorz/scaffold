@@ -51,7 +51,7 @@ end
 
 def podspec_file_path
     file_path = Dir.glob("./*.podspec").first
-    if podspec_file_path.nil? or podspec_file_path.empty?
+    if file_path.nil? or file_path.empty?
         puts "ERR:: podspec file does not exist."
         nil
     else
