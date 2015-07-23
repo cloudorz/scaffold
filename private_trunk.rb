@@ -1,61 +1,92 @@
 #!/usr/bin/env ruby 
 
+require 'fileutils' 
+
+
 EXEC_FILE_NAME = File.basename $0
 EXEC_EXT_NAME = File.extname $0
 EXEC_NAME = File.basename($0, EXEC_EXT_NAME)
+COMMAND_NAME_SUFFIX = "_trunk"
 
-puts ARGV.first
-
-private_source_name = ARGV.first
-if private_source_name.nil? or private_source_name.empty?
-    if EXEC_EXT_NAME.empty?
-        puts "Usage: #{EXEC_FILE_NAME} '<private repo name>'"
+def install
+    puts "Input the private cocoaPods repo name: "
+    repo_name = gets.chomp
+    if repo_name.empty?
+        puts "The private cocoaPods repo name cant be empty."
     else
-        puts "Usage: #{EXEC_FILE_NAME} '<private repo name>' or 'install'"
+        exec_script_name = repo_name + COMMAND_NAME_SUFFIX
+        FileUtils.install $0, "/usr/local/bin/#{exec_script_name}", :mode => 0755, :verbose => true
     end
-else
-    if EXEC_EXT_NAME == ".rb" and private_source_name == "install"
-       require 'fileutils' 
-       FileUtils.install $0, "/usr/local/bin/#{EXEC_NAME}", :mode => 0755, :verbose => true
-    else
-        # Get podsec file path
-        podspec_file_path = Dir.glob("./*.podspec").first
-        if podspec_file_path.nil? or podspec_file_path.empty?
-            puts "ERR: podspec file does not exist."
-        else
-            # update private source repo
-            update_result = `pod repo update #{private_source_name}`
-            puts update_result
-            if update_result.start_with? "[!] Unable to find the"
-                puts "ERR: The '#{private_source_name}' is not existed. Use 'pod repo add <name> <repo url>' to add it."
-            else
-                # Parse podspec file to json
-                podspec_json_string = `pod ipc spec #{podspec_file_path}`
+end
 
-                require 'json'
-                podspec_json = JSON.parse podspec_json_string
-                if podspec_json.nil?
-                    puts "ERR: Parse podspec json string fail."
+def repo_name_from_exec_name 
+    pieces = EXEC_NAME.split('_')
+    pieces.pop
+    pieces.join '_'
+end
+
+def update_repo_ok? repo_name
+    update_result = `pod repo update #{repo_name}`
+    puts update_result
+    if update_result.start_with? "[!] Unable to find the"
+        puts "ERR:: The '#{repo_name}' is not existed. Use 'pod repo add <name> <repo url>' to add it."
+        false
+    else
+        true
+    end
+end
+
+def parse_spec_name_and_version_from_podspec file_path
+    podspec_json_string = `pod ipc spec #{file_path}`
+
+    require 'json'
+    podspec_json = JSON.parse podspec_json_string
+    if podspec_json.nil? or podspec_json["name"] or podspec_json["version"]
+        puts "ERR:: Parse podspec json string fail."
+        [nil, nil]
+    else
+        [podspec_json["name"], podspec_json["version"]]
+    end
+end
+
+def podspec_file_path
+    file_path = Dir.glob("./*.podspec").first
+    if podspec_file_path.nil? or podspec_file_path.empty?
+        puts "ERR:: podspec file does not exist."
+        nil
+    else
+        file_path
+    end
+end
+
+def commit_and_push(file_path, repo_spec_path, message)
+    require 'fileutils'
+    FileUtils.mkdir_p repo_spec_path
+    FileUtils.cp file_path, repo_spec_path
+    FileUtils.cd(repo_spec_path) do
+        system "git add . && git commit -m'#{message}' && git push"
+    end
+end
+
+unless EXEC_FILE_NAME == "install.rb"
+    file_path = podspec_file_path
+    if file_path
+        spec_name, spec_version = parse_spec_name_and_version_from_podspec file_path
+        if spec_name and spec_version
+            private_repo_name = repo_name_from_exec_name
+            if update_repo_ok? private_repo_name
+                repo_all_path = File.join(Dir.home, ".cocoapods", "repos", private_repo_name, "Specs", spec_name, spec_version)
+                unless Dir.exist? repo_all_path 
+                    git_user_name = `git config user.name`
+                    message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
+                    commit_and_push file_path, repo_all_path, message
                 else
-                    # Get spec name and version
-                    spec_name = podspec_json["name"]
-                    spec_version = podspec_json["version"]
-                    repo_dir = File.join(Dir.home, ".cocoapods", "repos", private_source_name)
-                    repo_all_path = File.join(repo_dir, "Specs", spec_name, spec_version)
-                    if Dir.exist? repo_all_path 
-                        puts "ERR: The #{spec_version} of #{spec_name} is existed."
-                    else
-                        require 'fileutils'
-                        FileUtils.mkdir_p repo_all_path
-                        FileUtils.cp podspec_file_path, repo_all_path
-                        FileUtils.cd(repo_dir) do
-                            git_user_name = `git config user.name`
-                            `git add . && git commit -m"- [Add] #{spec_name} #{spec_version} by #{git_user_name} && git push"`
-                        end
-                    end
+                    puts "ERR:: The #{spec_version} of #{spec_name} is existed."
                 end
             end
         end
     end
+else
+    install
 end
 
