@@ -41,11 +41,11 @@ def parse_spec_name_and_version_from_podspec file_path
 
     require 'json'
     podspec_json = JSON.parse podspec_json_string
-    if podspec_json.nil? or podspec_json["name"] or podspec_json["version"]
+    if podspec_json and podspec_json["name"] and podspec_json["version"]
+        [podspec_json["name"], podspec_json["version"]]
+    else
         puts "ERR:: Parse podspec json string fail."
         [nil, nil]
-    else
-        [podspec_json["name"], podspec_json["version"]]
     end
 end
 
