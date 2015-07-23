@@ -1,23 +1,22 @@
 #!/usr/bin/env ruby 
 
-exec_file_name = File.basename $0
-exec_ext_name = File.extname $0
-exec_name = File.basename($0, exec_ext_name)
+EXEC_FILE_NAME = File.basename $0
+EXEC_EXT_NAME = File.extname $0
+EXEC_NAME = File.basename($0, EXEC_EXT_NAME)
 
-puts exec_file_name
-exit
+puts ARGV.first
 
 private_source_name = ARGV.first
 if private_source_name.nil? or private_source_name.empty?
-    if exec_ext_name.empty?
-        puts "Usage: #{exec_file_name} '<private repo name>'"
+    if EXEC_EXT_NAME.empty?
+        puts "Usage: #{EXEC_FILE_NAME} '<private repo name>'"
     else
-        puts "Usage: #{exec_file_name} '<private repo name>' or 'install'"
+        puts "Usage: #{EXEC_FILE_NAME} '<private repo name>' or 'install'"
     end
 else
-    if exec_ext_name == ".rb" and private_source_name == "install"
+    if EXEC_EXT_NAME == ".rb" and private_source_name == "install"
        require 'fileutils' 
-       FileUtils.install $0, "/usr/local/bin/#{exec_name}", :mode => 0755, :verbose => true
+       FileUtils.install $0, "/usr/local/bin/#{EXEC_NAME}", :mode => 0755, :verbose => true
     else
         # Get podsec file path
         podspec_file_path = Dir.glob("./*.podspec").first
