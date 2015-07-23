@@ -7,6 +7,7 @@ EXEC_FILE_NAME = File.basename $0
 EXEC_EXT_NAME = File.extname $0
 EXEC_NAME = File.basename($0, EXEC_EXT_NAME)
 COMMAND_NAME_SUFFIX = "_trunk"
+VERSION = "0.1"
 
 def install
     puts "Input the private cocoaPods repo name: "
@@ -68,20 +69,28 @@ def commit_and_push(file_path, repo_spec_path, message)
     end
 end
 
+def version
+    VERSION
+end
+
 unless EXEC_FILE_NAME == "install.rb"
-    file_path = podspec_file_path
-    if file_path
-        spec_name, spec_version = parse_spec_name_and_version_from_podspec file_path
-        if spec_name and spec_version
-            private_repo_name = repo_name_from_exec_name
-            if update_repo_ok? private_repo_name
-                repo_all_path = File.join(Dir.home, ".cocoapods", "repos", private_repo_name, "Specs", spec_name, spec_version)
-                unless Dir.exist? repo_all_path 
-                    git_user_name = `git config user.name`
-                    message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
-                    commit_and_push file_path, repo_all_path, message
-                else
-                    puts "ERR:: The #{spec_version} of #{spec_name} is existed."
+    if ['-v', '--version'].include? ARGV.first
+        puts "latest version: #{version}" 
+    else
+        file_path = podspec_file_path
+        if file_path
+            spec_name, spec_version = parse_spec_name_and_version_from_podspec file_path
+            if spec_name and spec_version
+                private_repo_name = repo_name_from_exec_name
+                if update_repo_ok? private_repo_name
+                    repo_all_path = File.join(Dir.home, ".cocoapods", "repos", private_repo_name, "Specs", spec_name, spec_version)
+                    unless Dir.exist? repo_all_path 
+                        git_user_name = `git config user.name`
+                        message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
+                        commit_and_push file_path, repo_all_path, message
+                    else
+                        puts "ERR:: The #{spec_version} of #{spec_name} is existed."
+                    end
                 end
             end
         end
