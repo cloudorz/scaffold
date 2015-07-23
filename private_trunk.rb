@@ -29,14 +29,12 @@ def repo_name_from_exec_name
 end
 
 def update_repo_ok? repo_name
-    puts "Updating private repo #{repo_name} ......"
     update_result = `pod repo update #{repo_name}`
     puts update_result
     if update_result.start_with? "[!] Unable to find the"
         puts "ERR:: The '#{repo_name}' is not existed. Use 'pod repo add <name> <repo url>' to add it."
         false
     else
-        puts "The private repo #{repo_name} has been updated!"
         true
     end
 end
@@ -89,13 +87,13 @@ unless EXEC_FILE_NAME == "install.rb"
             if spec_name and spec_version
                 private_repo_name = repo_name_from_exec_name
                 if update_repo_ok? private_repo_name
-                    repo_all_path = File.join(Dir.home, ".cocoapods", "repos", private_repo_name, "Specs", spec_name, spec_version)
+                    repo_all_path = File.join(Dir.home, ".cocoaPods", "repos", private_repo_name, "Specs", spec_name, spec_version)
                     unless Dir.exist? repo_all_path 
                         git_user_name = `git config user.name`
                         message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
                         commit_and_push file_path, repo_all_path, message
                     else
-                        puts "ERR:: The #{spec_version} of #{spec_name} is existed."
+                        puts "ERR:: The version #{spec_version} of #{spec_name} is existed."
                     end
                 end
             end
