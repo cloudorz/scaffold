@@ -48,6 +48,8 @@ def parse_spec_name_and_version_from_podspec file_path
     if podspec_json and podspec_json["name"] and podspec_json["version"]
         if block_given?
             yield podspec_json["name"], podspec_json["version"]
+        else
+            [podspec_json["name"], podspec_json["version"]]
         end
     else
         puts "ERR:: Parse podspec json string fail."
@@ -61,6 +63,8 @@ def get_podspec_file_path
     else
         if block_given?
             yield file_path
+        else
+            file_path
         end
     end
 end
@@ -97,10 +101,14 @@ def push_spec_version_tag spec_version
     else
         if tag_exist_in_local? spec_version
             `git push --tags`
-            yield
+            if block_given?
+                yield
+            end
         else
             `git tag #{spec_version} && git push --tags`
-            yield
+            if block_given?
+                yield
+            end
         end
     end
 end
