@@ -7,7 +7,7 @@ EXEC_FILE_NAME = File.basename $0
 EXEC_EXT_NAME = File.extname $0
 EXEC_NAME = File.basename($0, EXEC_EXT_NAME)
 COMMAND_NAME_SUFFIX = "_trunk"
-VERSION = "0.2"
+VERSION = "0.3"
 
 def install
     puts "Install ......"
@@ -113,21 +113,43 @@ def push_spec_version_tag spec_version
     end
 end
 
+def local_has_uncommits?
+    result = `git status`
+    not result.end_with? "nothing to commit, working directory clean\n"
+end
+
+def repo_not_sync?
+    result = `git status | grep -E 'ahead|behind'`
+    (result and not result.empty?)
+end
+
+def check_local_remote_repo_sync
+    if local_has_uncommits? or repo_not_sync?
+        puts "ERR:: The loal repo is not sync with remote repo."
+    else
+        if block_given?
+            yield
+        end
+    end
+end
+
 unless EXEC_FILE_NAME == "install.rb"
     if ['-v', '--version'].include? ARGV.first
         puts "latest version: #{version}" 
     else
         get_podspec_file_path do |file_path|
-            parse_spec_name_and_version_from_podspec file_path do |spec_name, spec_version|
-                push_spec_version_tag spec_version do
-                    update_repo repo_name_from_exec_name do |repo_name|
-                        repo_all_path = File.join(Dir.home, ".cocoaPods", "repos", repo_name, "Specs", spec_name, spec_version)
-                        unless Dir.exist? repo_all_path 
-                            git_user_name = `git config user.name`
-                            message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
-                            commit_and_push file_path, repo_all_path, message
-                        else
-                            puts "ERR:: The version #{spec_version} of #{spec_name} is existed."
+            check_local_remote_repo_sync do
+                parse_spec_name_and_version_from_podspec file_path do |spec_name, spec_version|
+                    push_spec_version_tag spec_version do
+                        update_repo repo_name_from_exec_name do |repo_name|
+                            repo_all_path = File.join(Dir.home, ".cocoaPods", "repos", repo_name, "Specs", spec_name, spec_version)
+                            unless Dir.exist? repo_all_path 
+                                git_user_name = `git config user.name`
+                                message = "- [Add] #{spec_name} #{spec_version} by #{git_user_name}"
+                                commit_and_push file_path, repo_all_path, message
+                            else
+                                puts "ERR:: The version #{spec_version} of #{spec_name} is existed."
+                            end
                         end
                     end
                 end
